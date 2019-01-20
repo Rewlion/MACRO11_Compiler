@@ -155,8 +155,8 @@ namespace AST
             const Word firstOp = g == InstructionGroup::OneAndHalf ? GetOperand(first) & 07 : GetOperand(first);
             const Word secondOp = GetOperand(second);
 
-            raw |= firstOp;
-            raw |= (secondOp << 6);
+            raw |= secondOp;
+            raw |= (firstOp << 6);
 
             const int instructionNumber = Commands.size() + 1;
             auto* i = new GeneratedInstructionNode(raw, node->Opcode, node->Line);

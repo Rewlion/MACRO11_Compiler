@@ -76,6 +76,7 @@ static std::map<Word, std::string> SingleOperandOpcodes = {
     { 0005600, "SBC"  },
     { 0105600, "SBCB" },
     { 0006700, "SXT"  },
+    { 0000100, "JMP"  },
 };
 
 static std::map<Word, std::string> DoubleOperandOpcodes = {

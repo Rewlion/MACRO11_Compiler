@@ -5,7 +5,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-
 extern int yylex();
 extern int yyparse(AST::AbstractSyntaxTree* ast);
 extern FILE *yyin;

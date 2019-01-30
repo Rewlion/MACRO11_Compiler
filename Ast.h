@@ -61,16 +61,6 @@ namespace AST
         LabelNode*   Labels;
     };
 
-    class GeneratedInstructionNode : public CommandNode
-    {
-    public:
-        GeneratedInstructionNode(const Word instruction, const Word opcode, const int line);
-        virtual void Accept(class AstVisitor* visitor) override;
-
-    public:
-        const Word Instruction;
-    };
-
     class OneOperandCommandNode : public CommandNode
     {
     public:
@@ -112,7 +102,6 @@ namespace AST
         virtual void Visit(LabelNode* node)                               {}
         virtual void Visit(OperandNode* node)                             {}
         virtual void Visit(CommandNode* node)                             {}
-        virtual void Visit(GeneratedInstructionNode* node)                {}
         virtual void Visit(OneOperandCommandNode* node)                   {}
         virtual void Visit(DoubleOperandCommandNode* node)                {}
         virtual void Visit(ProgramNode* node)                             {}

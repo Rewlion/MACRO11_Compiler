@@ -109,17 +109,6 @@ namespace AST
         delete Commands;
     }
 
-    GeneratedInstructionNode::GeneratedInstructionNode(const Word instruction, const Word opcode, const int line)
-        : CommandNode(opcode, line)
-        , Instruction(instruction)
-    {
-    }
-
-    void GeneratedInstructionNode::Accept(AstVisitor* visitor)
-    {
-        visitor->Visit(this);
-    }
-
     AbstractSyntaxTree::AbstractSyntaxTree()
         : Program(nullptr)
     {

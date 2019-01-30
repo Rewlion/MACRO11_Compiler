@@ -24,11 +24,11 @@ namespace AST
         private:
             void AddInstructionLabels(const CommandNode* node, const int instructionNumber);
             void AddLabel(const char* name, const int instructionNumber);
-            inline void AddAdditionalInstructionWords();
-            Word GetOperand(const OperandNode* node);
+            unsigned int GetOperandSize(const OperandNode* node);
 
         private:
             ProgramNode *              Program;
+            unsigned int               CurrentProgramSize;
             std::vector<CommandNode*>  Commands;
             std::map<std::string, int> LabelsTable;
             std::queue<Word>           AdditionalInstructionWords;
@@ -56,18 +56,10 @@ namespace AST
             return LabelsTable;
         }
 
-        void FirstPass::AddAdditionalInstructionWords()
-        {
-            while (AdditionalInstructionWords.empty() == false)
-            {
-                const Word i = AdditionalInstructionWords.front();
-                Commands.push_back(new GeneratedInstructionNode(i, 0, -1)); //todo add info
-                    AdditionalInstructionWords.pop();
-            }
-        }
 
         FirstPass::FirstPass()
             : Program(new ProgramNode(nullptr))
+            , CurrentProgramSize(0)
         {
         }
 
@@ -90,102 +82,49 @@ namespace AST
 
         void FirstPass::Visit(CommandNode* node)
         {
-            const int instructionNumber = Commands.size() + 1;
-            auto* i = new GeneratedInstructionNode(node->Opcode, node->Opcode, node->Line);
-            i->SetInstructionNumber(instructionNumber);
-
-            Commands.push_back(i);
+            const int instructionNumber = CurrentProgramSize++;
+            
             AddInstructionLabels(node, instructionNumber);
+            
+            Commands.push_back(node);
         }
 
         void FirstPass::Visit(OneOperandCommandNode* node)
         {
-            Word raw = 0;
-            raw |= node->Opcode;
+            const int instructionNumber = CurrentProgramSize;
 
-            const OperandNode* first = node->First;
-            const InstructionGroup g = GetInstructionGroup(node->Opcode);
+            CurrentProgramSize += 1 + GetOperandSize(node->First);
 
-            if (g == InstructionGroup::SingleOperand)
-            {
-                const Word op = GetOperand(first);
-                raw |= op;
-            }
-            else if (g == InstructionGroup::Branch)
-            {
-                const int instructionNumber = Commands.size() + 1;
-                if (first->AddrType == AddressingType::Label)
-                {
-                    auto it = LabelsTable.find(first->LabelName);
-                    if (it != LabelsTable.end())
-                    {
-                        raw |= static_cast<uint8_t>((it->second - instructionNumber) * 2);
-                    }
-                    else
-                    {
-                        auto* i = new OneOperandCommandNode(*node);
-                        i->SetInstructionNumber(instructionNumber);
-
-                        Commands.push_back(i);
-                        return;
-                    }
-                }
-                else
-                    raw |= first->Value;
-            }
-
-            const int instructionNumber = Commands.size() + 1;
-            auto* i = new GeneratedInstructionNode(raw, node->Opcode, node->Line);
-            i->SetInstructionNumber(instructionNumber);
-
-            Commands.push_back(i);
+            Commands.push_back(node);
             AddInstructionLabels(node, instructionNumber);
-            AddAdditionalInstructionWords();
         }
 
         void FirstPass::Visit(DoubleOperandCommandNode* node)
         {
-            Word raw = 0;
-            raw |= node->Opcode;
+            const unsigned int instructionNumber = CurrentProgramSize;
 
-            const OperandNode* first = node->First;
-            const OperandNode* second = node->Second;
-            const InstructionGroup g = GetInstructionGroup(node->Opcode);
+            CurrentProgramSize += 1 + GetOperandSize(node->First) + GetOperandSize(node->Second);
 
-            const Word firstOp = g == InstructionGroup::OneAndHalf ? GetOperand(first) & 07 : GetOperand(first);
-            const Word secondOp = GetOperand(second);
-
-            raw |= secondOp;
-            raw |= (firstOp << 6);
-
-            const int instructionNumber = Commands.size() + 1;
-            auto* i = new GeneratedInstructionNode(raw, node->Opcode, node->Line);
-            i->SetInstructionNumber(instructionNumber);
-
-            Commands.push_back(i);
+            Commands.push_back(node);
             AddInstructionLabels(node, instructionNumber);
-            AddAdditionalInstructionWords();
         }
 
-        Word FirstPass::GetOperand(const OperandNode* node)
+        unsigned int FirstPass::GetOperandSize(const OperandNode* node)
         {
-            Word op = 0;
+            unsigned int size = 0;
 
-            if (node->OpType == OperandType::Number)
+            if (   node->OpType   == OperandType::Number
+                || node->AddrType == AddressingType::Index
+                || node->AddrType == AddressingType::IndexDeferred)
             {
-                op |= RegisterNumber::PC;
-                AdditionalInstructionWords.push(node->Value);
+                size = 1;
             }
             else
             {
-                op |= node->Value;
-                if (node->AddrType == AddressingType::Index || node->AddrType == AddressingType::IndexDeferred)
-                    AdditionalInstructionWords.push(node->IndexedOffset);
+                size = 0;
             }
 
-            op |= (static_cast<int>(node->AddrType) << 3);
-
-            return op;
+            return size;
         }
 
         class SecondPass : public AstVisitor
@@ -193,12 +132,16 @@ namespace AST
         public:
             SecondPass(const std::map<std::string, int>& labelsTable, std::vector<Error>& errors);
 
-            virtual void Visit(GeneratedInstructionNode* node) override;
+            virtual void Visit(CommandNode* node) override;
             virtual void Visit(OneOperandCommandNode* node) override;
+            virtual void Visit(DoubleOperandCommandNode* node) override;
 
             inline const std::vector<Word>&& GetProgram() const;
             inline const std::vector<Error>& GetErrors() const;
 
+        private:
+            Word GetRawOperand(const OperandNode* node, std::vector<Word>* additionalWords) const;
+            Word GetRawLabel(const std::string& labelName, const unsigned int instructionNumber, CommandNode* node) const;
         private:
             const std::map<std::string, int>& LabelsTable;
             std::vector<Word> Program;
@@ -221,32 +164,102 @@ namespace AST
         {
         }
 
-        void SecondPass::Visit(GeneratedInstructionNode* node)
+        Word SecondPass::GetRawOperand(const OperandNode* node, std::vector<Word>* additionalWords) const
         {
-            Program.push_back(node->Instruction);
+            Word op = 0;
+
+            if (node->OpType == OperandType::Number)
+            {
+                additionalWords->push_back(node->Value);
+                op = RegisterNumber::PC;
+            }
+            else
+            {
+                if (node->AddrType == AddressingType::Index || node->AddrType == AddressingType::IndexDeferred)
+                    additionalWords->push_back(node->IndexedOffset);
+
+                op = node->Value;
+            }
+
+            op |= (static_cast<int>(node->AddrType) << 3);
+            return op;
+        }
+
+        Word SecondPass::GetRawLabel(const std::string& labelName, const unsigned int instructionNumber, CommandNode* node) const
+        {
+            auto it = LabelsTable.find(labelName);
+            if (it != LabelsTable.end())
+            {
+                return static_cast<uint8_t>(it->second - instructionNumber);
+            }
+            else
+            {
+                Errors.push_back(Error{ node, std::string("Label doesn't exist:") + labelName });
+                return 0;
+            }
+        }
+
+        void SecondPass::Visit(CommandNode* node)
+        {
+            Program.push_back(node->Opcode);
         }
 
         void SecondPass::Visit(OneOperandCommandNode* node)
         {
-            Word raw = 0;
-            raw |= node->Opcode;
+            std::vector<Word> additionalWords;
+            const unsigned int instructionNumber = Program.size();
+            Word raw = node->Opcode;
 
             const OperandNode* first = node->First;
-
-            assert(GetInstructionGroup(node->Opcode) == InstructionGroup::Branch);
-            assert(first->AddrType == AddressingType::Label);
-            
-            auto it = LabelsTable.find(first->LabelName);
-            if (it != LabelsTable.end())
+            if (first->AddrType == AddressingType::Label)
             {
-                raw |= static_cast<uint8_t>((it->second - node->InstructionNumber) * 2);
-                Program.push_back(raw);
+                const Word rawLabel = GetRawLabel(first->LabelName, instructionNumber, node);
+                
+                if (GetInstructionGroup(node->Opcode) == InstructionGroup::Branch)
+                {
+                    raw |= rawLabel;
+                }
+                else
+                {
+                    Word op = RegisterNumber::PC;
+                    op |= (static_cast<int>(AddressingType::AutoIncrement) << 3);
+                    raw |= op;
+                    additionalWords.push_back(rawLabel);
+                }
             }
             else
             {
-                Errors.push_back(Error{ node, std::string("Label doesn't exist:") + std::string(first->LabelName) });
+                const Word op = GetRawOperand(first, &additionalWords);
+                raw |= op;
             }
+            
+            Program.push_back(raw);
+            if(additionalWords.empty() == false)
+                Program.push_back(additionalWords[0]);
         }
+    }
+
+    void SecondPass::Visit(DoubleOperandCommandNode* node)
+    {
+        std::vector<Word> additionalWords;
+        const unsigned int instructionNumber = Program.size();
+        Word raw = node->Opcode;
+
+        const OperandNode* first = node->First;
+        const OperandNode* second = node->Second;
+        assert((first->AddrType != AddressingType::Label) && (second->AddrType != AddressingType::Label));
+
+        const InstructionGroup g = GetInstructionGroup(node->Opcode);
+
+        const Word firstOp = g == InstructionGroup::OneAndHalf ? GetRawOperand(first, &additionalWords) & 07 : GetRawOperand(first, &additionalWords);
+        const Word secondOp = GetRawOperand(second, &additionalWords);
+
+        raw |= secondOp;
+        raw |= (firstOp << 6);
+
+        Program.push_back(raw);
+        for (const Word w : additionalWords)
+            Program.push_back(w);
     }
 
     std::vector<Word> CodeGenerator::Generate(AST::AbstractSyntaxTree* ast)
@@ -256,7 +269,6 @@ namespace AST
 
         ProgramNode* pn = fp.GetProgram();
         SecondPass sp{ fp.GetLabelsTable(), Errors };
-        
         pn->Accept(&sp);
         std::vector<Word> program = std::move(sp.GetProgram());
 

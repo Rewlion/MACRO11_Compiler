@@ -21,7 +21,7 @@
 [ \t]*          ;
 [\n]            { ++yylineno;}
 
-[0-9]+          { yylval.ival = atoi(yytext); return INT; }
+[-+]?[0-9]+     { yylval.ival = atoi(yytext); return INT; }
 [rR][0-7]       { yylval.ival = yytext[1] - '0'; return REGISTER;}
 =               { return TOKEN_DIRECT_ASSIGN;}
 %               { return TOKEN_TERM_INDICATOR;}

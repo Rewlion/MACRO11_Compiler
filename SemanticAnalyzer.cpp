@@ -47,9 +47,9 @@ namespace AST
 
     void SemanticAnalyzer::CheckOneAndHalfCommand(const DoubleOperandCommandNode* node)
     {
-        const OperandNode* first = node->First;
-        if (first->OpType != OperandType::Register)
-            Errors.push_back(Error{ node, "wrong operand(register is expected)." });
+        const OperandNode* second = node->Second;
+        if (second->OpType != OperandType::Register)
+            Errors.push_back(Error{ node, "wrong operand (second operand is expected to be a register)." });
     }
 
     void SemanticAnalyzer::CheckBranchCommand(const OneOperandCommandNode* node)

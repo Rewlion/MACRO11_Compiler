@@ -5,6 +5,7 @@
 #include <string>
 
 typedef uint16_t Word;
+typedef uint8_t  Byte;
 
 inline size_t GetRAMSize()           { return 1024 * 8; }
 inline size_t GetVRAMSize()          { return 1024 * 32; }

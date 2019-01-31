@@ -217,7 +217,7 @@ namespace AST
                 
                 if (GetInstructionGroup(node->Opcode) == InstructionGroup::Branch)
                 {
-                    const Byte offset = static_cast<Byte>(rawLabel - instructionNumber);
+                    const Byte offset = static_cast<Byte>(rawLabel - instructionNumber) - 1;
                     raw |= offset;
                 }
                 else

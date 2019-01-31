@@ -6,6 +6,18 @@
 
 typedef uint16_t Word;
 
+inline size_t GetRAMSize()           { return 1024 * 8; }
+inline size_t GetVRAMSize()          { return 1024 * 32; }
+inline size_t GetROMSize()           { return 1024 * 8; }
+inline size_t GetRegistersSize()     { return 8 * 2; }
+inline size_t GetIOSize()            { return 1024 * 16 - GetRegistersSize(); }
+
+inline size_t GetRAMBegining()       { return 0; }
+inline size_t GetVRAMBegining()      { return GetRAMSize(); }
+inline size_t GetROMBegining()       { return GetVRAMBegining() + GetVRAMSize(); }
+inline size_t GetIOBegining()        { return GetROMBegining() + GetROMSize(); }
+inline size_t GetRegistersBegining() { return GetIOBegining() + GetIOSize(); }
+
 enum RegisterNumber
 {
     R0 = 0,

@@ -141,7 +141,7 @@ namespace AST
 
         private:
             Word GetRawOperand(const OperandNode* node, std::vector<Word>* additionalWords) const;
-            Word GetRawLabel(const std::string& labelName, const unsigned int instructionNumber, CommandNode* node) const;
+            Word GetRawLabel(const std::string& labelName, CommandNode* node) const;
         private:
             const std::map<std::string, int>& LabelsTable;
             std::vector<Word> Program;
@@ -185,12 +185,12 @@ namespace AST
             return op;
         }
 
-        Word SecondPass::GetRawLabel(const std::string& labelName, const unsigned int instructionNumber, CommandNode* node) const
+        Word SecondPass::GetRawLabel(const std::string& labelName, CommandNode* node) const
         {
             auto it = LabelsTable.find(labelName);
             if (it != LabelsTable.end())
             {
-                return static_cast<uint8_t>(it->second - instructionNumber);
+                return static_cast<uint8_t>(it->second);
             }
             else
             {
@@ -213,18 +213,19 @@ namespace AST
             const OperandNode* first = node->First;
             if (first->AddrType == AddressingType::Label)
             {
-                const Word rawLabel = GetRawLabel(first->LabelName, instructionNumber, node);
+                const Word rawLabel = GetRawLabel(first->LabelName, node);
                 
                 if (GetInstructionGroup(node->Opcode) == InstructionGroup::Branch)
                 {
-                    raw |= rawLabel;
+                    const Word offset = rawLabel - instructionNumber;
+                    raw |= offset;
                 }
                 else
                 {
                     Word op = RegisterNumber::PC;
                     op |= (static_cast<int>(AddressingType::AutoIncrement) << 3);
                     raw |= op;
-                    additionalWords.push_back(rawLabel);
+                    additionalWords.push_back(rawLabel + GetROMBegining());
                 }
             }
             else

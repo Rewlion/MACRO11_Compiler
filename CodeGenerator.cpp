@@ -252,11 +252,11 @@ namespace AST
 
         const InstructionGroup g = GetInstructionGroup(node->Opcode);
 
-        const Word firstOp = g == InstructionGroup::OneAndHalf ? GetRawOperand(first, &additionalWords) & 07 : GetRawOperand(first, &additionalWords);
-        const Word secondOp = GetRawOperand(second, &additionalWords);
+        const Word firstOp = GetRawOperand(first, &additionalWords);
+        const Word secondOp = g == InstructionGroup::OneAndHalf ? GetRawOperand(second, &additionalWords) & 07 : GetRawOperand(second, &additionalWords);
 
-        raw |= secondOp;
-        raw |= (firstOp << 6);
+        raw |= firstOp;
+        raw |= (secondOp << 6);
 
         Program.push_back(raw);
         for (const Word w : additionalWords)

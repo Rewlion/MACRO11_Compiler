@@ -24,7 +24,7 @@ namespace AST
         private:
             void AddInstructionLabels(const CommandNode* node, const int instructionNumber);
             void AddLabel(const char* name, const int instructionNumber);
-            unsigned int GetOperandSize(const OperandNode* node);
+            unsigned int GetOperandSize(const OperandNode* node, const InstructionGroup g);
 
         private:
             ProgramNode *              Program;
@@ -92,8 +92,9 @@ namespace AST
         void FirstPass::Visit(OneOperandCommandNode* node)
         {
             const int instructionNumber = CurrentProgramSize;
+            const InstructionGroup g = GetInstructionGroup(node->Opcode);
 
-            CurrentProgramSize += 1 + GetOperandSize(node->First);
+            CurrentProgramSize += 1 + GetOperandSize(node->First, g);
 
             Commands.push_back(node);
             AddInstructionLabels(node, instructionNumber);
@@ -102,20 +103,23 @@ namespace AST
         void FirstPass::Visit(DoubleOperandCommandNode* node)
         {
             const unsigned int instructionNumber = CurrentProgramSize;
+            const InstructionGroup g = GetInstructionGroup(node->Opcode);
 
-            CurrentProgramSize += 1 + GetOperandSize(node->First) + GetOperandSize(node->Second);
+            CurrentProgramSize += 1 + GetOperandSize(node->First, g) + GetOperandSize(node->Second, g);
 
             Commands.push_back(node);
             AddInstructionLabels(node, instructionNumber);
         }
 
-        unsigned int FirstPass::GetOperandSize(const OperandNode* node)
+        unsigned int FirstPass::GetOperandSize(const OperandNode* node, const InstructionGroup g)
         {
             unsigned int size = 0;
 
             if (   node->OpType   == OperandType::Number
                 || node->AddrType == AddressingType::Index
-                || node->AddrType == AddressingType::IndexDeferred)
+                || node->AddrType == AddressingType::IndexDeferred
+                || (node->AddrType == AddressingType::Label && g != InstructionGroup::Branch)
+               )
             {
                 size = 1;
             }

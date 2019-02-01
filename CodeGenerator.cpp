@@ -142,6 +142,8 @@ namespace AST
         private:
             Word GetRawOperand(const OperandNode* node, std::vector<Word>* additionalWords) const;
             Word GetRawLabel(const std::string& labelName, CommandNode* node) const;
+            Word ConstructLabelOperand(const Word rawLabel, std::vector<Word>* additionalWords) const;
+            Word ConstructDoubleOperand(const OperandNode* opNode, std::vector<Word>* additionalWords, DoubleOperandCommandNode* node) const;
         private:
             const std::map<std::string, int>& LabelsTable;
             std::vector<Word> Program;
@@ -199,6 +201,32 @@ namespace AST
             }
         }
 
+        Word SecondPass::ConstructLabelOperand(const Word rawLabel, std::vector<Word>* additionalWords) const
+        {
+            Word op = RegisterNumber::PC;
+            op |= (static_cast<int>(AddressingType::AutoIncrement) << 3);
+            additionalWords->push_back(rawLabel * sizeof(Word) + GetROMBegining());
+
+            return op;
+        }
+
+        Word SecondPass::ConstructDoubleOperand(const OperandNode* opNode, std::vector<Word>* additionalWords, DoubleOperandCommandNode* node) const
+        {
+            Word op = 0;
+            if (opNode->AddrType == AddressingType::Label)
+            {
+                const Word rawLabel = GetRawLabel(opNode->LabelName, node);
+                op = ConstructLabelOperand(rawLabel, additionalWords);
+            }
+            else
+            {
+                InstructionGroup g = GetInstructionGroup(node->Opcode);
+                op = g == InstructionGroup::OneAndHalf ? GetRawOperand(opNode, additionalWords) & 07 : GetRawOperand(opNode, additionalWords);
+            }
+
+            return op;
+        }
+
         void SecondPass::Visit(CommandNode* node)
         {
             Program.push_back(node->Opcode);
@@ -222,10 +250,8 @@ namespace AST
                 }
                 else
                 {
-                    Word op = RegisterNumber::PC;
-                    op |= (static_cast<int>(AddressingType::AutoIncrement) << 3);
+                    Word op = ConstructLabelOperand(rawLabel, &additionalWords);
                     raw |= op;
-                    additionalWords.push_back(rawLabel + GetROMBegining());
                 }
             }
             else
@@ -246,16 +272,10 @@ namespace AST
         const unsigned int instructionNumber = Program.size();
         Word raw = node->Opcode;
 
-        const OperandNode* first = node->First;
-        const OperandNode* second = node->Second;
-        assert((first->AddrType != AddressingType::Label) && (second->AddrType != AddressingType::Label));
-
-        const InstructionGroup g = GetInstructionGroup(node->Opcode);
-
-        const Word firstOp = GetRawOperand(first, &additionalWords);
-        const Word secondOp = g == InstructionGroup::OneAndHalf ? GetRawOperand(second, &additionalWords) & 07 : GetRawOperand(second, &additionalWords);
-
+        const Word firstOp = ConstructDoubleOperand(node->First, &additionalWords, node);
         raw |= firstOp;
+
+        const Word secondOp = ConstructDoubleOperand(node->Second, &additionalWords, node);
         raw |= (secondOp << 6);
 
         Program.push_back(raw);

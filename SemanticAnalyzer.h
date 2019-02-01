@@ -21,6 +21,7 @@ namespace AST
     private:
         void CheckOneAndHalfCommand(const DoubleOperandCommandNode* node);
         void CheckBranchCommand(const OneOperandCommandNode* node);
+        void CheckOneOperandCommand(const OneOperandCommandNode* node);
 
     private:
         std::vector<Error> Errors;

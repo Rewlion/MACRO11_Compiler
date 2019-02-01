@@ -83,6 +83,7 @@ static std::map<Word, std::string> SingleOperandOpcodes = {
     { 0106000, "RORB" },
     { 0006100, "ROL"  },
     { 0106100, "ROLB" },
+    { 0000200, "RTS"  },
     { 0000300, "SWAB" },
     { 0005500, "ADC"  },
     { 0105500, "ADCB" },
@@ -201,6 +202,7 @@ enum OpCodes
    OPCODE_NEGB = 0105400,
    OPCODE_NOP  = 0000240,
    OPCODE_RETURN = 0000207,
+   OPCODE_RTS  = 0000200,
    OPCODE_SUB  = 0160000,
    OPCODE_XOR  = 0074000,
 };

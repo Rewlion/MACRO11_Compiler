@@ -17,6 +17,7 @@ namespace AST
         switch (g)
         {
         case InstructionGroup::SingleOperand:
+            CheckOneOperandCommand(node);
             return;
 
         case InstructionGroup::Branch:
@@ -57,5 +58,12 @@ namespace AST
         const OperandNode* first = node->First;
         if (first->OpType != OperandType::Number && first->OpType != OperandType::LabelName)
             Errors.push_back(Error{ node, "wrong operand(label or int is expected)." });
+    }
+
+    void SemanticAnalyzer::CheckOneOperandCommand(const OneOperandCommandNode* node)
+    {
+        const OperandNode* first = node->First;
+        if ((node->Opcode == OPCODE_RTS) && (first->OpType != OperandType::Register || first->AddrType != AddressingType::Register))
+            Errors.push_back(Error{ node, "wrong operand(RTS expects only a register.)" });
     }
 }

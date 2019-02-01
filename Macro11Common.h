@@ -113,6 +113,7 @@ static std::map<Word, std::string> OneAndHalfOpcodes = {
     { 0072000, "ASH" },
     { 0073000, "ASHC"},
     { 0074000, "XOR" },
+    { 0004000, "JSR" },
 };
 
 static std::map<Word, std::string> BranchOpcodes = {

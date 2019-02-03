@@ -17,7 +17,13 @@
 
 %}
 %option noyywrap
+%x COMMENT
 %%
+
+;               { BEGIN(COMMENT); }
+<COMMENT>\n     { ++yylineno; BEGIN(INITIAL); }
+<COMMENT>.      { }
+
 [ \t]*          ;
 [\n]            { ++yylineno;}
 
@@ -102,6 +108,7 @@ RETURN          { yylval.ival = OPCODE_RETURN; return COMMAND;}
 RTS             { yylval.ival = OPCODE_RTS   ; return COMMAND;}
 SUB             { yylval.ival = OPCODE_SUB   ; return COMMAND;}
 XOR             { yylval.ival = OPCODE_XOR   ; return COMMAND;}
+
 
 [a-zA-Z][_a-zA-Z0-9]*   { yylval.sval = strdup(yytext); return STRING;}
 ^[a-zA-Z][_a-zA-Z0-9]*: {  yytext[strlen(yytext)-1] = '\0'; yylval.sval = strdup(yytext); return LABEL;}

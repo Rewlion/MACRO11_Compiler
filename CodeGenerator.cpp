@@ -276,11 +276,11 @@ namespace AST
         const unsigned int instructionNumber = Program.size();
         Word raw = node->Opcode;
 
-        const Word firstOp = ConstructDoubleOperand(node->First, &additionalWords, node);
-        raw |= firstOp;
-
         const Word secondOp = ConstructDoubleOperand(node->Second, &additionalWords, node);
         raw |= (secondOp << 6);
+
+        const Word firstOp = ConstructDoubleOperand(node->First, &additionalWords, node);
+        raw |= firstOp;
 
         Program.push_back(raw);
         for (const Word w : additionalWords)

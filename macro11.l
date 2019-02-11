@@ -106,6 +106,7 @@ NEGB            { yylval.ival = OPCODE_NEGB  ; return COMMAND;}
 NOP             { yylval.ival = OPCODE_NOP   ; return COMMAND;}
 RETURN          { yylval.ival = OPCODE_RETURN; return COMMAND;}
 RTS             { yylval.ival = OPCODE_RTS   ; return COMMAND;}
+RTI             { yylval.ival = OPCODE_RTI   ; return COMMAND;}
 SUB             { yylval.ival = OPCODE_SUB   ; return COMMAND;}
 XOR             { yylval.ival = OPCODE_XOR   ; return COMMAND;}
 
